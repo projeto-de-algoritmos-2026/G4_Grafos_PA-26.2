@@ -9,6 +9,17 @@ function mulberry32(seed) {
   }
 }
 
+function sampleDistinct(rand, pool, k) {
+  const arr = pool.slice();
+  const out = [];
+  for(let i = 0; i < k && arr.length; i++) {
+    const idx = Math.floor(rand() * arr.length);
+    out.push(arr[idx]);
+    arr.splice(idx, 1);
+  }
+  return out;
+}
+
 function generateNetwork(seed) {
   const rand = mulberry32(seed);
   const randInt = (a, b) => a + Math.floor(rand() * (b - a + 1));
@@ -44,10 +55,10 @@ function generateNetwork(seed) {
     const size = randInt(3, 7);
     const ringNodes = [];
     for(let i = 0; i < size; i++) {
-      const n = {id: id++, label: `ACC-${String(id - 1).padStart(4,'0')}`, type: 'fraud', ring: ringIdx};
+      const n = {id: id++, label: `ACC-${String(id - 1).padStart(4,'0')}`, type: 'fraud', ring: ringIdx, layer: randInt(0, LAYERS - 1)};
       nodes.push(n); ringNodes.push(n);
     }
-    let t0 = baseTime + randInt(20, 60) * 3600 * 1000;
+    let t0 = baseTime + randInt(0, (LAYERS - 1) * 3) * 3600 * 1000 + randInt(0, 3000) * 1000;
     let amt = randInt(20000, 80000);
     for(let i = 0; i < size; i++) {
       const from = ringNodes[i], to = ringNodes[(i + 1) % size];
@@ -55,16 +66,27 @@ function generateNetwork(seed) {
       t0 += randInt(1, 25) * 60 * 1000;
       edges.push({from: from.id, to: to.id, amount: amt, ts: t0, type: 'fraud_internal'});
     }
-    const sourcePool = nodes.filter(n => n.type === 'legit' && n.layer <= 1);
-    const src = sourcePool[randInt(0, sourcePool.length - 1)];
-    edges.push({from: src.id, to: ringNodes[0].id, amount: Math.round(amt * 1.1), ts: t0 - randInt(30, 90) * 60 * 1000, type: 'bridge'});
-    
-    const sinkPool = nodes.filter(n => n.type === 'legit' && n.layer >= LAYERS - 2);
-    const sink = sinkPool[randInt(0, sinkPool.length - 1)];
-    const exitFrom = ringNodes[randInt(0, size - 1)];
-    edges.push({from: exitFrom.id, to: sink.id, amount: Math.round(amt * 0.85), ts: t0 + randInt(5, 20) * 60 * 1000, type: 'bridge'});
-    
-    ringInfo.push({ringIdx, nodeIds: ringNodes.map(n => n.id), size, entry: src.id, exit: sink.id});
+
+    const entryPool = nodes.filter(n => n.type === 'legit' && n.layer <= 2);
+    const nEntries = randInt(1, Math.min(3, entryPool.length));
+    const entrySrcs = sampleDistinct(rand, entryPool, nEntries);
+    entrySrcs.forEach(src => {
+      const target = ringNodes[randInt(0, size - 1)];
+      edges.push({from: src.id, to: target.id, amount: Math.round(amt * 1.1 / nEntries),
+                  ts: t0 - randInt(30, 90) * 60 * 1000, type: 'bridge'});
+    });
+
+    const exitPool = nodes.filter(n => n.type === 'legit' && n.layer >= LAYERS - 2);
+    const nExits = randInt(1, Math.min(3, exitPool.length));
+    const exitSinks = sampleDistinct(rand, exitPool, nExits);
+    exitSinks.forEach(sink => {
+      const source = ringNodes[randInt(0, size - 1)];
+      edges.push({from: source.id, to: sink.id, amount: Math.round(amt * 0.85 / nExits),
+                  ts: t0 + randInt(5, 20) * 60 * 1000, type: 'bridge'});
+    });
+
+    ringInfo.push({ringIdx, nodeIds: ringNodes.map(n => n.id), size,
+                    entries: entrySrcs.map(n => n.id), exits: exitSinks.map(n => n.id)});
   }
   return {nodes, edges, ringInfo, LAYERS};
 }
@@ -119,28 +141,31 @@ function kahn(nodeIds, edges) {
   return {success: orderOut.length === nodeIds.length, order: orderOut};
 }
 
-function layoutPositions(nodes, ringInfo, LAYERS) {
-  const pos = new Map();
-  const legit = nodes.filter(n => n.type === 'legit');
-  const marginX = 40, marginY = 30, flowH = 260;
-  const spacingX = (W - 2 * marginX) / (LAYERS - 1);
-  for(const n of legit) {
-    const perLayer = legit.filter(m => m.layer === n.layer).length;
-    const spacingY = flowH / (perLayer + 1);
-    const x = marginX + n.layer * spacingX;
-    const y = marginY + (n.layerSlot + 1) * spacingY;
-    pos.set(n.id, [x, y]);
+function shuffle(arr) {
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  const clusterY = 360;
-  const clusterSpacing = W / (ringInfo.length + 1);
-  ringInfo.forEach((r, idx) => {
-    const cx = clusterSpacing * (idx + 1);
-    const cy = clusterY + (idx % 2 === 0 ? 0 : 40);
-    const R = 14 + r.size * 3;
-    r.nodeIds.forEach((nid, i) => {
-      const ang = (i / r.size) * 2 * Math.PI - Math.PI / 2;
-      pos.set(nid, [cx + R * Math.cos(ang), cy + R * Math.sin(ang)]);
+  return a;
+}
+
+function layoutPositions(nodes, LAYERS) {
+  const pos = new Map();
+  const marginX = 40, marginY = 26;
+  const flowH = H - 2 * marginY;
+  const spacingX = (W - 2 * marginX) / (LAYERS - 1);
+
+  for(let L = 0; L < LAYERS; L++) {
+    const colNodes = shuffle(nodes.filter(n => n.layer === L));
+    const spacingY = flowH / (colNodes.length + 1);
+    colNodes.forEach((n, i) => {
+      const jitterX = (Math.random() - 0.5) * spacingX * 0.3;
+      const jitterY = (Math.random() - 0.5) * spacingY * 0.4;
+      const x = marginX + L * spacingX + jitterX;
+      const y = marginY + (i + 1) * spacingY + jitterY;
+      pos.set(n.id, [x, y]);
     });
-  });
+  }
   return pos;
 }

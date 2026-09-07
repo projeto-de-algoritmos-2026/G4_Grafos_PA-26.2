@@ -14,7 +14,7 @@ function analyzeAndInit() {
   const cleanIds = nodes.map(n => n.id).filter(id => !fraudIds.has(id));
   const {order} = kahn(cleanIds, edges);
   
-  G = {nodes, edges, fraudRings, fraudIds, order, cleanIds, pos: layoutPositions(nodes, ringInfo, LAYERS)};
+  G = {nodes, edges, fraudRings, fraudIds, order, cleanIds, pos: layoutPositions(nodes, LAYERS)};
   
   document.getElementById('status-fase-1').innerHTML = 
     `O sistema carregou <b>${G.edges.length} transferências</b> ocorrendo entre <b>${G.nodes.length} contas</b>.<br><br>

@@ -32,7 +32,9 @@ def generate_synthetic_network(seed=42, num_legit=200, num_rings=4):
         size = rng.randint(3, 7)
         ring = [f"ACC-{next_id + i:04d}" for i in range(size)]
         next_id += size
-        t0 = base_time + timedelta(hours=rng.randint(20, 60))
+
+        t0 = base_time + timedelta(hours=rng.randint(0, (layers - 1) * 3),
+                                    seconds=rng.randint(0, 3000))
         amt = rng.randint(20000, 80000)
         for i in range(size):
             frm, to = ring[i], ring[(i + 1) % size]
@@ -40,11 +42,20 @@ def generate_synthetic_network(seed=42, num_legit=200, num_rings=4):
             t0 += timedelta(minutes=rng.randint(1, 25))
             graph.add_edge(frm, to, amt, t0)
 
-        entry_src = rng.choice([a for a in accounts if layer_of[a] <= 1])
-        graph.add_edge(entry_src, ring[0], round(amt * 1.1),
-                        t0 - timedelta(minutes=rng.randint(30, 90)))
-        exit_sink = rng.choice([a for a in accounts if layer_of[a] >= layers - 2])
-        graph.add_edge(rng.choice(ring), exit_sink, round(amt * 0.85),
-                        t0 + timedelta(minutes=rng.randint(5, 20)))
+        entry_pool = [a for a in accounts if layer_of[a] <= 2]
+        n_entries = rng.randint(1, min(3, len(entry_pool)))
+        entry_srcs = rng.sample(entry_pool, n_entries)
+        for src in entry_srcs:
+            target = rng.choice(ring)
+            graph.add_edge(src, target, round(amt * 1.1 / n_entries),
+                            t0 - timedelta(minutes=rng.randint(30, 90)))
+
+        exit_pool = [a for a in accounts if layer_of[a] >= layers - 2]
+        n_exits = rng.randint(1, min(3, len(exit_pool)))
+        exit_sinks = rng.sample(exit_pool, n_exits)
+        for sink in exit_sinks:
+            source = rng.choice(ring)
+            graph.add_edge(source, sink, round(amt * 0.85 / n_exits),
+                            t0 + timedelta(minutes=rng.randint(5, 20)))
 
     return graph
