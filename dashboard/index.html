@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sistema de Prevenção à Lavagem de Dinheiro (AML)</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Radar de <span>Compliance</span></h1>
+    <button class="regen" id="regen">Gerar Novo Lote de Transações</button>
+  </header>
+
+  <div class="stepper">
+    <div class="step active" data-step="1">
+      <div class="step-num">Fase 1</div>
+      <div class="step-title">Rede Bruta</div>
+      <div class="step-desc">Visão geral de todas as transações registradas no sistema.</div>
+    </div>
+    <div class="step" data-step="2">
+      <div class="step-num">Fase 2</div>
+      <div class="step-title">Isolamento de Esquemas</div>
+      <div class="step-desc">Detecção de grupos repassando dinheiro em ciclos fechados.</div>
+    </div>
+    <div class="step" data-step="3">
+      <div class="step-num">Fase 3</div>
+      <div class="step-title">Validação Histórica</div>
+      <div class="step-desc">Limpeza da rede e extração da linha do tempo cronológica.</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title" id="graphTitle">Mapeamento de Transferências</h2>
+        <p class="panel-subtitle" id="graphSubtitle">Cada ponto é uma conta. As linhas mostram o fluxo do dinheiro.</p>
+      </div>
+      <div id="graph"></div>
+      <div class="legend" id="graphLegend"></div>
+    </div>
+
+    <div class="panel">
+      <!-- FASE 1: Contexto Geral -->
+      <div id="side-step-1" class="view-section active">
+        <div class="context-box">
+          <div class="context-title">Status da Investigação</div>
+          <div class="context-text" id="status-fase-1"></div>
+        </div>
+        <button class="regen btn-forward" onclick="setStep(2)">Avançar para Detecção ➔</button>
+      </div>
+
+      <!-- FASE 2: Lista de Anéis -->
+      <div id="side-step-2" class="view-section">
+        <div class="context-box border-red">
+          <div class="context-title text-red">Padrões Suspeitos Detectados</div>
+          <div class="context-text" id="status-fase-2">
+            O algoritmo encontrou grupos de contas agindo como "laranjas". Elas transferem fundos continuamente umas para as outras em circuito fechado (layering) para esconder a origem do dinheiro.
+          </div>
+        </div>
+        <div class="ring-list" id="ringListUI"></div>
+        <button class="regen btn-forward" style="margin-top:16px;" onclick="setStep(3)">Remover suspeitos e validar ➔</button>
+      </div>
+
+      <!-- FASE 3: Linha do Tempo -->
+      <div id="side-step-3" class="view-section">
+        <div class="context-box border-green">
+          <div class="context-title text-green">Linha do Tempo Aprovada</div>
+          <div class="context-text">
+            Com as contas suspeitas bloqueadas e isoladas, o restante da rede foi validado com sucesso. Abaixo está o livro-razão cronológico e linear das transações legítimas.
+          </div>
+        </div>
+        <div class="ledger-wrap">
+          <table>
+            <thead><tr><th>Seq</th><th>Origem</th><th>Destino</th><th>Valor</th></tr></thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/algorithms.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
