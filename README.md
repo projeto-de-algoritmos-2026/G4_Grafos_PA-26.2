@@ -79,7 +79,7 @@ Use o botão **"Gerar Novo Lote de Transações"** para reiniciar a investigaç�
 
 ## Vídeo da Apresentação
 
-<video src="assets/g4_grafos_pa_2026_2_revisado.mp4" controls width="100%"></video>
+[Assista no YouTube](https://youtu.be/AEwr2zVYUaI)
 
 ## Outros
 
