@@ -77,7 +77,12 @@ No dashboard, o mesmo fluxo é apresentado como uma investigação guiada em tr�
 
 Use o botão **"Gerar Novo Lote de Transações"** para reiniciar a investigação com uma rede sintética diferente a qualquer momento.
 
+## Vídeo da Apresentação
+
+<video src="assets/g4_grafos_pa_2026_2_revisado.mp4" controls width="100%"></video>
+
 ## Outros
+
 - Projeto em desenvolvimento.
 - Por padrão o projeto roda sobre dados sintéticos gerados em tempo real; ele também aceita uma rede de transações real via CSV, desde que no formato `from,to,amount,timestamp`.
 - O dashboard reimplementa os algoritmos em JavaScript para funcionar inteiramente no navegador, sem depender do backend em Python — as duas implementações seguem a mesma lógica, mas evoluem de forma independente.
